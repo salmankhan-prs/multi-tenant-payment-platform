@@ -2,3 +2,5 @@ node_modules/
 dist/
 .env
 .sst/
+.DS_Store
+tsconfig.tsbuildinfo
