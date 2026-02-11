@@ -1,0 +1,61 @@
+version: "3.8"
+
+services:
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: mongosh --eval "db.runCommand('ping').ok" --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: redis-cli ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017/payment-platform
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: docker-compose-dev-secret
+      BASE_DOMAIN: localhost
+      PORT: "3000"
+      NODE_ENV: production
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # One-off container that seeds test data and exits
+  seed:
+    build: .
+    command: node dist/seed.js
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017/payment-platform
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: docker-compose-dev-secret
+      BASE_DOMAIN: localhost
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - seed
+
+volumes:
+  mongo_data:
